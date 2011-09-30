@@ -5,20 +5,19 @@ mkdir('output'); % directory that contains output from the code.
 
 %% parameters for the outer square bounding box
 category = 'Social';
-supressionModeInEStep = 'MatchingPursuit'; % matching pursuit in E step (other options: LocalSurroundSurpression)
-templateSize = [72 72];
-templateSize = single(templateSize);
-partSize = floor(sqrt(templateSize(1)*templateSize(2))); % alias for the template size (radius)
+outerBBsize = 200;
+rectStep = 40;
 %% parameters for EM clustering
 locationPerturbationFraction = .25; % the size of neighborhood for MAX2 pooling, as well as surround supression
-rotationRange = -2:2:2; % allowed global rotation of the template
+rotationRange = -0:2:0; % allowed global rotation of the template
 subsampleS2 = 1; % subsampling step size for computing SUM2 maps
 maxNumClusterMember = 30; % maximum number of training examples in each cluster used in re-learning the template
 S2Thres = 0; % cut-off value for detected instances of the template
-numIter = 10; % number of EM iterations
+numEMIter = 6; % number of EM iterations
 %% parameters for active basis
-numCluster = 30; % number of data clusters
-numElement = 15; % number of Gabors in active basis at the first scale
+numCluster = 5; % number of data clusters
+numElement = 30; % maximum number of Gabors in active basis
+S1Thres = .3;        % cut-off for selected Gabors
 epsilon = .1; % allowed correlation between selected Gabors 
 subsample = 1; subsampleM1 = 1; % subsample in computing MAX1 maps
 locationShiftLimit = 3; % shift in normal direction = locationShiftLimit*subsample pixels
@@ -44,16 +43,12 @@ thresholdFactor = .01;  % divide the response by max(average, maxAverage*thresho
 
 %% parameters for detection
 inhibitFind = -1;  % whether to apply inhibition after detection for re-computing MAX2 score
-resolutionGap = .1; % gap between consecutive resolutions in detection
+resolutionGap = .5; % gap between consecutive resolutions in detection
 numExtend = 0; % number of gaps extended both below and above zero
 numResolution = numExtend*2 + 1;  % number of resolutions to search for in detection stage
 originalResolution = numExtend + 1; % original resolution is the one at which the imresize factor = 1
 allResolution = (-numExtend : numExtend)*resolutionGap + 1.;
 %% read in positive images
-sizeTemplatex = templateSize(1);
-sizeTemplatey = templateSize(2);
-halfTemplatex = floor(sizeTemplatex/2);
-halfTemplatey = floor(sizeTemplatey/2);
 imageFolder = 'positiveImage'; % folder of training images  
 imageName = dir([imageFolder '/*.jpg']);
 numImage = size(imageName, 1); % number of training images 
@@ -65,7 +60,7 @@ for img = 1 : numImage
     end
 
     sx = size(tmpIm,1); sy = size(tmpIm,2);
-    tmpIm = imresize( tmpIm, 250/sqrt(sx*sy), 'bilinear' );
+    tmpIm = imresize( tmpIm, outerBBsize/sqrt(sx*sy), 'bilinear' );
     Ioriginal{img} = single(tmpIm);
     J0 = Ioriginal{img};
     J = cell(1, numResolution);
@@ -84,15 +79,18 @@ for templateScaleInd = 0:0 % large scale change
             for colScale = 2.^[0]
                 count = count + 1;
                 templateTransform{count} = [templateScaleInd rowScale colScale rotation];
+                if rotation == 0
+                	NO_TRANSFORM = count - 1; % starts from 0
+                end
             end
         end
     end
 end
 nTransform = count;
 
-save('partLocConfig.mat','templateSize',...
+save('partLocConfig.mat','outerBBsize',...
     'category','numOrient','localOrNot','subsample','saturation','locationShiftLimit','orientShiftLimit',...
-    'numElement','thresholdFactor','doubleOrNot', 'numCluster', 'numIter', 'subsampleS2', 'locationPerturbationFraction',...
-    'partSize','rotationRange','nTransform','templateTransform');
+    'numElement','thresholdFactor','doubleOrNot', 'numCluster', 'numEMIter', 'subsampleS2', 'locationPerturbationFraction',...
+    'rotationRange','nTransform','templateTransform');
 clear Ioriginal
 
