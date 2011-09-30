@@ -1,0 +1,6 @@
+Functionality:
+
+	EM clustering for rectangular regions inside the image lattice. The images are assumed to be aligned (not necessarily the same size).
+
+Run StartFromHere.m in the Matlab. And you can monitor intermediate results in output/.
+
