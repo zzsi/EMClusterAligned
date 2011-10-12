@@ -10,6 +10,8 @@ mex mexc_SharedSketch.cpp	% learning by shared sketch algorithm (with data weigh
 mex mexc_TemplateAffineTransform.cpp
 mex mexc_CropInstanceNew.cpp
 
+mex mexc_ComputeSUMMAX2FixCluster.cpp
+
 %% preparation
 
 ParameterCodeImage;

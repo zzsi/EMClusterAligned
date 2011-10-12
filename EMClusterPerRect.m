@@ -9,6 +9,9 @@ bestOverallScore = -inf;
 
 buf_length = 0;
 
+%% JS - for empty clusters
+emptyCluster = zeros(1, numCluster);
+
 for iRS = 1:numRandomStart
 
 	mixing = zeros(numCluster,1); % number of examples in each cluster
@@ -20,7 +23,10 @@ for iRS = 1:numRandomStart
 	activatedImg = activations(1,:);
 	activations(2,:) = top + floor(height/2) - 1; % starts from 0
 	activations(3,:) = left + floor(width/2) - 1; % starts from 0
-	activatedCluster = ceil( numCluster * rand(1,numImage) ); % starts from 1
+
+    activatedCluster = ceil( numCluster * rand(1,numImage) ); % starts from 1
+    activatedCluster = imageClass;
+    
 	activations(4,:) = (activatedCluster-1) * nTransform + NO_TRANSFORM; % starts from 0
 	activatedTransform = activations(4,:) + 1 - (activatedCluster-1) * nTransform; % starts from 1
     initialClusters = activations;
@@ -32,10 +38,12 @@ for iRS = 1:numRandomStart
 		% crop back SUM1 maps
 		
 		for cc = 1:numCluster
-			for k = 1:buf_length
-				fprintf(1,'\b');
-			end
-			str = sprintf('run %d: learning iteration %d for cluster %d',iRS,iter,cc);
+            if emptyCluster(cc)>0, continue, end;
+
+% 			for k = 1:buf_length
+% 				fprintf(1,'\b');
+% 			end
+			str = sprintf('run %d: learning iteration %d for cluster %d\n',iRS,iter,cc);
 			fprintf(1,str);
 			drawnow;
 			buf_length = length(str);
@@ -60,7 +68,8 @@ for iRS = 1:numRandomStart
 			nMember = length(ind);
 			
 			if nMember == 0
-				%disp('empty cluster');
+                emptyCluster(cc) = 1;
+				disp('empty cluster\n');
 				continue;
 			end
 			
@@ -98,11 +107,13 @@ for iRS = 1:numRandomStart
 				ARGMAX1mapLearn(iMember,:) = ARGMAX1;
 			end
 			im = displayImages(cropped,10,templateSize(1),templateSize(2));
-			if ~isempty(im)
-				imwrite(im,sprintf('output/cluter%d_iter%d.png',cc,iter));
-			else
-				continue;
-			end
+
+            imwrite(im,sprintf('output/cluter%d_iter%d.png',cc,iter));
+% 			if ~isempty(im)
+% 				imwrite(im,sprintf('output/cluter%d_iter%d.png',cc,iter));
+% 			else
+% 				continue;
+% 			end
 			
 			% now start re-learning
 			commonTemplate = single(zeros(templateSize(1), templateSize(2)));  
@@ -114,7 +125,7 @@ for iRS = 1:numRandomStart
 			   numElement, nMember, templateSize(1), templateSize(2), ...
 			   SUM1mapLearn, MAX1mapLearn, ARGMAX1mapLearn, ... % about training images
 			   halfFilterSize, Correlation, allSymbol(1, :), ... % about filters
-			   numStoredPoint, storedlambda, storedExpectation, storedLogZ, ... % about exponential model 
+			   numStoredPoint, single(storedlambda), single(storedExpectation), single(storedLogZ), ... % about exponential model 
 			   selectedOrient, selectedx, selectedy, selectedlambda, selectedLogZ, ... % learned parameters
 			   commonTemplate, deformedTemplate, ... % learned templates 
 			   M1RowShift, M1ColShift, M1OriShifted); % local shift parameters
@@ -147,6 +158,8 @@ for iRS = 1:numRandomStart
 		% transform the templates
 		S2Templates = cell(numCluster,1);
 		for cc = 1:numCluster
+            if emptyCluster(cc)>0, continue, end;
+            
 			load(sprintf('working/learnedmodel%d_iter%d.mat',cc,iter), 'numElement', 'selectedOrient', 'selectedx', 'selectedy', 'selectedlambda', 'selectedLogZ', 'commonTemplate');
 			S2Templates{cc} = struct( 'selectedRow', single(selectedx -1 - floor(templateSize(1)/2)),...
 				'selectedCol', single(selectedy -1 - floor(templateSize(2)/2)), ...
@@ -156,6 +169,15 @@ for iRS = 1:numRandomStart
 		TransformedTemplate = cell(nTransform,numCluster);
 		
 		for cc = 1:numCluster
+            %% JS - for empty clusters
+            if emptyCluster(cc)>0
+                TransformedTemplate{iT,cc} = struct( 'selectedRow', [],...
+                    'selectedCol', [], ...
+                    'selectedOri', [], 'selectedScale', [], ...
+                    'selectedLambda', [], 'selectedLogZ', [], 'commonTemplate', [] );
+                continue;
+            end;
+            
             selectedScale = zeros(1,length(S2Templates{cc}.selectedRow),'single');
 			for iT = 1:nTransform
 				templateScaleInd = templateTransform{iT}(1);
@@ -180,9 +202,9 @@ for iRS = 1:numRandomStart
 			% compute SUM2 and find local maximum (MAX2)
 			SUM1MAX1mapName = ['working/SUM1MAX1map' 'image' num2str(i) 'scale' num2str(1)];
 			load(SUM1MAX1mapName, 'MAX1map');
-			activation = mexc_ComputeSUMMAX2( numOrient, MAX1map, TransformedTemplate, subsampleS2, ...
+			activation = mexc_ComputeSUMMAX2FixCluster( numOrient, MAX1map, TransformedTemplate, subsampleS2, ...
 				locationPerturbationFraction, ...
-				int32(templateSize), int32([top+height/2,left+width/2]) );
+				int32(templateSize), int32([top+height/2,left+width/2]), imageClass(i) );
 			% discard the activated instances that have a low S2 score
 			activations = [activations,[i;activation]];
 		end
@@ -212,6 +234,8 @@ activatedImg = activations(1,:);
 activatedCluster = ceil( ( activations(4,:) + 1 ) / nTransform ); % starts from 1
 activatedTransform = activations(4,:) + 1 - (activatedCluster-1) * nTransform; % starts from 1
 for cc = 1:numCluster
+    if emptyCluster(cc)>0, continue, end;
+    
 	ind = find(activatedCluster == cc);
 	% sample a subset of training postitives, if necessary
 	if length(ind) > maxNumClusterMember

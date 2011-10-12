@@ -44,6 +44,8 @@ const int* templateLoc;			/* location of the template */
 int bestS2Row, bestS2Col, bestS2Template; /* the activation vector */
 float bestS2Score;
 
+const bool keep_current_cluster = true;
+
 void compute()
 {
     int iT, iF;
@@ -84,6 +86,10 @@ void compute()
 	bestS2Score = NEGMAX;
     for( iT = 0; iT < nT; ++iT )
     {
+        // JS 10/01 - for empty clusters
+        if (nElement[iT] < 1) {
+            continue;
+        }
         pA = mxGetCell( S2Template, iT );
 		pA2 = mxGetField( pA, 0, "selectedRow" );
         selectedRow = (const float*)mxGetPr(pA2);

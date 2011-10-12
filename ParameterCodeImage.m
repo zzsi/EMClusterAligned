@@ -13,9 +13,9 @@ rotationRange = -0:2:0; % allowed global rotation of the template
 subsampleS2 = 1; % subsampling step size for computing SUM2 maps
 maxNumClusterMember = 30; % maximum number of training examples in each cluster used in re-learning the template
 S2Thres = 0; % cut-off value for detected instances of the template
-numEMIter = 6; % number of EM iterations
+numEMIter = 3; % number of EM iterations
 %% parameters for active basis
-numCluster = 5; % number of data clusters
+numCluster = 10; % number of data clusters
 numElement = 30; % maximum number of Gabors in active basis
 S1Thres = .3;        % cut-off for selected Gabors
 epsilon = .1; % allowed correlation between selected Gabors 
@@ -52,12 +52,15 @@ allResolution = (-numExtend : numExtend)*resolutionGap + 1.;
 imageFolder = 'positiveImage'; % folder of training images  
 imageName = dir([imageFolder '/*.jpg']);
 numImage = size(imageName, 1); % number of training images 
+imageClass = zeros(1, numImage);
 Ioriginal = cell(1, numImage);
 for img = 1 : numImage
     tmpIm = imread([imageFolder '/' imageName(img).name]); 
     if size(tmpIm,3) == 3
         tmpIm = rgb2gray(tmpIm);
     end
+    
+    imageClass(img) = str2num(imageName(img).name(2:3));
 
     sx = size(tmpIm,1); sy = size(tmpIm,2);
     tmpIm = imresize( tmpIm, outerBBsize/sqrt(sx*sy), 'bilinear' );
