@@ -1,6 +1,11 @@
 Functionality:
 
-	EM clustering for rectangular regions inside the image lattice. The images are assumed to be aligned (not necessarily the same size).
+	Learn a re-configurable AND-OR template for input images.
 
-Run StartFromHere.m in the Matlab. And you can monitor intermediate results in output/.
+	It performs two steps:
+	1) EM clustering for rectangular regions inside the image lattice. The images are assumed to be aligned (not necessarily the same size).
+	2) Learning an optimal partition of the whole object into rectangular parts (partition configuration) using dynamic programming.
+
+Run StartFromHere.m in the Matlab. This produces the visual codebook for rectangular patches. And you can monitor intermediate results in output/.
+Then run StartDP.m to learn the partition configuration.
 
